@@ -128,6 +128,7 @@ func (s *ProxyServer) Start() {
 	r := mux.NewRouter()
 	r.Handle("/{login:0x[0-9a-fA-F]{40}}/{id:[0-9a-zA-Z-_]{1,8}}", s)
 	r.Handle("/{login:0x[0-9a-fA-F]{40}}", s)
+	r.HandleFunc("/", s.getHandler)
 	srv := &http.Server{
 		Addr:           s.config.Proxy.Listen,
 		Handler:        r,
@@ -137,6 +138,14 @@ func (s *ProxyServer) Start() {
 	if err != nil {
 		log.Fatalf("Failed to start proxy: %v", err)
 	}
+}
+
+func (s *ProxyServer) getHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		s.writeError(w, 405, "rpc: GET method required, received "+r.Method)
+		return
+	}
+	s.writeGet(w)
 }
 
 func (s *ProxyServer) rpc() *rpc.RPCClient {
@@ -162,7 +171,15 @@ func (s *ProxyServer) checkUpstreams() {
 }
 
 func (s *ProxyServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	if r.Method != "POST" {
+	if r.Method == http.MethodOptions {
+		s.writeOptions(w)
+		return
+	}
+	if r.Method == http.MethodGet {
+		s.writeGet(w)
+		return
+	}
+	if r.Method != http.MethodPost {
 		s.writeError(w, 405, "rpc: POST method required, received "+r.Method)
 		return
 	}
@@ -184,6 +201,7 @@ func (s *ProxyServer) remoteAddr(r *http.Request) string {
 }
 
 func (s *ProxyServer) handleClient(w http.ResponseWriter, r *http.Request, ip string) {
+	w.Header().Set("Access-Control-Allow-Origin", "*")
 	if r.ContentLength > s.config.Proxy.LimitBodySize {
 		log.Printf("Socket flood from %s", ip)
 		s.policy.ApplyMalformedPolicy(ip)
@@ -280,8 +298,26 @@ func (cs *Session) sendError(id json.RawMessage, reply *ErrorReply) error {
 }
 
 func (s *ProxyServer) writeError(w http.ResponseWriter, status int, msg string) {
-	w.WriteHeader(status)
 	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+	w.Write([]byte(msg))
+	w.WriteHeader(status)
+}
+
+func (s *ProxyServer) writeOptions(w http.ResponseWriter) {
+	w.Header().Set("Access-Control-Allow-Origin", "*")
+	w.Header().Set("Access-Control-Allow-Credentials", "true")
+	w.Header().Set("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
+	w.Header().Set("Access-Control-Allow-Headers", "DNT,X-CustomHeader,Keep-Alive,User-Agent,X-Requested-With,If-Modified-Since,Cache-Control,Content-Type")
+	w.Header().Set("Access-Control-Max-Age", "1728000")
+	w.Header().Set("Content-Type", "text/plain charset=UTF-8")
+	w.Header().Set("Content-Length", "0")
+	w.WriteHeader(204)
+}
+
+func (s *ProxyServer) writeGet(w http.ResponseWriter) {
+	w.Header().Set("Access-Control-Allow-Origin", "*")
+	w.Write([]byte("open-ethereum-pool"))
+	w.WriteHeader(200)
 }
 
 func (s *ProxyServer) currentBlockTemplate() *BlockTemplate {
