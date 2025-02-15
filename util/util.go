@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/common/math"
 )
 
@@ -35,7 +36,7 @@ func MakeTimestamp() int64 {
 func GetTargetHex(diff int64) string {
 	difficulty := big.NewInt(diff)
 	diff1 := new(big.Int).Div(pow256, difficulty)
-	return string(common.ToHex(diff1.Bytes()))
+	return string(hexutil.Encode(diff1.Bytes()))
 }
 
 func TargetHexToDiff(targetHex string) *big.Int {
@@ -43,8 +44,12 @@ func TargetHexToDiff(targetHex string) *big.Int {
 	return new(big.Int).Div(pow256, new(big.Int).SetBytes(targetBytes))
 }
 
-func ToHex(n int64) string {
-	return "0x0" + strconv.FormatInt(n, 16)
+func ToHex(n int64, padding bool) string {
+	hexStr := strconv.FormatInt(n, 16)
+	if padding && len(hexStr) % 2 == 1 {
+		hexStr = "0" + hexStr
+	}
+	return "0x" + hexStr
 }
 
 func FormatReward(reward *big.Int) string {

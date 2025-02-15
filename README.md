@@ -8,11 +8,9 @@
 
 **This pool is no longer supported, expect only casual fixes.**
 
-**Parity client is MANDATORY. Geth is no longer supported.**
-
 * Support for HTTP and Stratum mining
 * Detailed block stats with luck percentage and full reward
-* Parity nodes rpc failover built in
+* Geth nodes rpc failover built in
 * Modern beautiful Ember.js frontend
 * Separate stats for workers: can highlight timed-out workers so miners can perform maintenance of rigs
 * JSON-API for stats
@@ -26,22 +24,21 @@
 
 Dependencies:
 
-  * go >= 1.9
-  * parity (will not work with geth)
+  * go >= 1.21
+  * geth (core-geth)
   * redis-server >= 2.8.0
-  * nodejs >= 4 LTS
+  * nodejs >= 18.x LTS
   * nginx
 
-**I highly recommend to use Ubuntu 16.04 LTS.**
+**I highly recommend to use Ubuntu 22.04 LTS.**
 
 First install  [go-ethereum](https://github.com/ethereum/go-ethereum/wiki/Installation-Instructions-for-Ubuntu).
 
 Clone & compile:
 
-    git config --global http.https://gopkg.in.followRedirects true
     git clone https://github.com/sammy007/open-ethereum-pool.git
     cd open-ethereum-pool
-    make
+    go build -v -o pool main.go
 
 Install redis-server.
 
@@ -53,7 +50,7 @@ You can use Ubuntu upstart - check for sample config in <code>upstart.conf</code
 
 ### Building Frontend
 
-Install nodejs. I suggest using LTS version >= 4.x from https://github.com/nodesource/distributions or from your Linux distribution or simply install nodejs on Ubuntu Xenial 16.04.
+Install nodejs. I suggest using LTS version >= 18.x from https://github.com/nodesource/distributions or from your Linux distribution or simply install nodejs on Ubuntu Xenial 16.04.
 
 The frontend is a single-page Ember.js application that polls the pool API to render miner stats.
 
@@ -61,11 +58,8 @@ The frontend is a single-page Ember.js application that polls the pool API to re
 
 Change <code>ApiUrl: '//example.net/'</code> in <code>www/config/environment.js</code> to match your domain name. Also don't forget to adjust other options.
 
-    npm install -g ember-cli@2.9.1
-    npm install -g bower
     npm install
-    bower install
-    ./build.sh
+    npm run build
 
 Configure nginx to serve API on <code>/api</code> subdirectory.
 Configure nginx to serve <code>www/dist</code> as static website.
@@ -216,7 +210,7 @@ otherwise you will get errors on start because of JSON comments.**
   // Check health of each node in this interval
   "upstreamCheckInterval": "5s",
 
-  /* List of parity nodes to poll for new jobs. Pool will try to get work from
+  /* List of geth nodes to poll for new jobs. Pool will try to get work from
     first alive one and check in background for failed to back up.
     Current block template of the pool is always cached in RAM indeed.
   */
@@ -259,9 +253,9 @@ otherwise you will get errors on start because of JSON comments.**
     "keepTxFees": false,
     // Run unlocker in this interval
     "interval": "10m",
-    // Parity node rpc endpoint for unlocking blocks
+    // Geth node rpc endpoint for unlocking blocks
     "daemon": "http://127.0.0.1:8545",
-    // Rise error if can't reach parity
+    // Rise error if can't reach geth
     "timeout": "10s"
   },
 
@@ -272,13 +266,13 @@ otherwise you will get errors on start because of JSON comments.**
     "requirePeers": 25,
     // Run payouts in this interval
     "interval": "12h",
-    // Parity node rpc endpoint for payouts processing
+    // Geth node rpc endpoint for payouts processing
     "daemon": "http://127.0.0.1:8545",
-    // Rise error if can't reach parity
+    // Rise error if can't reach geth
     "timeout": "10s",
     // Address with pool balance
     "address": "0x0",
-    // Let parity to determine gas and gasPrice
+    // Let geth to determine gas and gasPrice
     "autoGas": true,
     // Gas amount and price for payout tx (advanced users only)
     "gas": "21000",
