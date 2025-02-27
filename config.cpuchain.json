@@ -1,7 +1,7 @@
 {
 	"threads": 2,
-	"coin": "eth",
-	"algo": "ethash",
+	"coin": "cpu",
+	"algo": "yespower",
 	"algoPers": "",
 	"name": "main",
 
@@ -13,7 +13,7 @@
 		"behindReverseProxy": false,
 		"blockRefreshInterval": "120ms",
 		"stateUpdateInterval": "3s",
-		"difficulty": 2000000000,
+		"difficulty": 2000,
 		"hashrateExpiration": "3h",
 
 		"healthCheck": true,
@@ -25,7 +25,7 @@
 		},
 
 		"stratum": {
-			"enabled": true,
+			"enabled": false,
 			"listen": "0.0.0.0:8008",
 			"timeout": "120s",
 			"maxConn": 8192,
@@ -60,7 +60,7 @@
 		"enabled": true,
 		"purgeOnly": false,
 		"purgeInterval": "10m",
-		"listen": "0.0.0.0:8080",
+		"listen": "0.0.0.0:8081",
 		"statsCollectInterval": "5s",
 		"hashrateWindow": "30m",
 		"hashrateLargeWindow": "3h",
@@ -74,11 +74,6 @@
 		{
 			"name": "main",
 			"url": "http://127.0.0.1:8545",
-			"timeout": "10s"
-		},
-		{
-			"name": "backup",
-			"url": "http://127.0.0.2:8545",
 			"timeout": "10s"
 		}
 	],
@@ -115,10 +110,5 @@
 		"autoGas": true,
 		"threshold": 500000000,
 		"bgsave": false
-	},
-
-	"newrelicEnabled": false,
-	"newrelicName": "MyEtherProxy",
-	"newrelicKey": "SECRET_KEY",
-	"newrelicVerbose": false
+	}
 }
