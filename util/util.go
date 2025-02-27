@@ -46,7 +46,7 @@ func TargetHexToDiff(targetHex string) *big.Int {
 
 func ToHex(n int64, padding bool) string {
 	hexStr := strconv.FormatInt(n, 16)
-	if padding && len(hexStr) % 2 == 1 {
+	if padding && len(hexStr)%2 == 1 {
 		hexStr = "0" + hexStr
 	}
 	return "0x" + hexStr

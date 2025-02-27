@@ -16,8 +16,10 @@ type Config struct {
 
 	Threads int `json:"threads"`
 
-	Coin  string         `json:"coin"`
-	Redis storage.Config `json:"redis"`
+	Coin     string         `json:"coin"`
+	Algo     string         `json:"algo"`
+	AlgoPers string         `json:"algoPers"`
+	Redis    storage.Config `json:"redis"`
 
 	BlockUnlocker payouts.UnlockerConfig `json:"unlocker"`
 	Payouts       payouts.PayoutsConfig  `json:"payouts"`
@@ -45,6 +47,8 @@ type Proxy struct {
 	HealthCheck bool  `json:"healthCheck"`
 
 	Stratum Stratum `json:"stratum"`
+
+	Websocket Websocket `json:"websocket"`
 }
 
 type Stratum struct {
@@ -55,6 +59,11 @@ type Stratum struct {
 	TLS      bool   `json:"tls"`
 	CertFile string `json:"certFile"`
 	KeyFile  string `json:"keyFile"`
+}
+
+type Websocket struct {
+	Enabled bool   `json:"enabled"`
+	Timeout string `json:"timeout"`
 }
 
 type Upstream struct {

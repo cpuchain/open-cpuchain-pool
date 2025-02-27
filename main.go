@@ -31,11 +31,19 @@ func startApi() {
 }
 
 func startBlockUnlocker() {
+	if cfg.Coin == "cpu" {
+		log.Println("Unlocker is disabled for CPUchain, please use pool-unlocker instead")
+		return
+	}
 	u := payouts.NewBlockUnlocker(&cfg.BlockUnlocker, backend)
 	u.Start()
 }
 
 func startPayoutsProcessor() {
+	if cfg.Coin == "cpu" {
+		log.Println("Payout processor is disabled for CPUchain, please use pool-unlocker instead")
+		return
+	}
 	u := payouts.NewPayoutsProcessor(&cfg.Payouts, backend)
 	u.Start()
 }
