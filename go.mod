@@ -7,7 +7,7 @@ replace github.com/ethereum/ethash => github.com/mkrufky/ethereum-ethash v0.0.0-
 replace github.com/ethereum/go-ethereum => github.com/etclabscore/core-geth v1.12.20
 
 require (
-	github.com/cpuchain/go-yespower v0.0.0-20250221002716-6417c2fd6452
+	github.com/cpuchain/go-yespower v0.0.0-20250307185114-ae042af251f4
 	github.com/ethereum/ethash v0.0.0-20221028165206-dc3eda17d27f
 	github.com/ethereum/go-ethereum v1.10.3
 	github.com/gorilla/mux v1.8.0

@@ -22,7 +22,7 @@ func yespowerHash(hash []byte, nonce uint64, pers string) *big.Int {
 	copy(seed, hash)
 	binary.LittleEndian.PutUint64(seed[32:], nonce)
 
-	result := yespower.Hash(seed, pers)
+	result := yespower.Hash(seed, uint32(2048), uint32(32), pers)
 	return new(big.Int).SetBytes(result)
 }
 
