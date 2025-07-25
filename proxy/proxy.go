@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/gorilla/mux"
+	"github.com/gorilla/websocket"
 
 	"github.com/sammy007/open-ethereum-pool/policy"
 	"github.com/sammy007/open-ethereum-pool/rpc"
@@ -34,6 +35,9 @@ type ProxyServer struct {
 	sessionsMu sync.RWMutex
 	sessions   map[*Session]struct{}
 	timeout    time.Duration
+
+	// Websocket
+	upgrader *websocket.Upgrader
 }
 
 type Session struct {
@@ -44,6 +48,9 @@ type Session struct {
 	sync.Mutex
 	conn  net.Conn
 	login string
+
+	// Websocket
+	wsconn *websocket.Conn
 }
 
 func NewProxy(cfg *Config, backend *storage.RedisClient) *ProxyServer {
@@ -62,7 +69,21 @@ func NewProxy(cfg *Config, backend *storage.RedisClient) *ProxyServer {
 	}
 	log.Printf("Default upstream: %s => %s", proxy.rpc().Name, proxy.rpc().Url)
 
+	if cfg.Proxy.Websocket.Enabled {
+		timeout := util.MustParseDuration(cfg.Proxy.Websocket.Timeout)
+
+		proxy.timeout = timeout
+		proxy.sessions = make(map[*Session]struct{})
+		proxy.upgrader = &websocket.Upgrader{
+			HandshakeTimeout: timeout,
+			CheckOrigin: func(r *http.Request) bool {
+				return true
+			},
+		}
+	}
+
 	if cfg.Proxy.Stratum.Enabled {
+		proxy.timeout = util.MustParseDuration(cfg.Proxy.Stratum.Timeout)
 		proxy.sessions = make(map[*Session]struct{})
 		go proxy.ListenTCP()
 	}
@@ -141,11 +162,44 @@ func (s *ProxyServer) Start() {
 }
 
 func (s *ProxyServer) getHandler(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodGet {
-		s.writeError(w, 405, "rpc: GET method required, received "+r.Method)
-		return
+	// Handle upgrade header request
+	upgrade := false
+	for _, header := range r.Header["Upgrade"] {
+		if header == "websocket" {
+			upgrade = true
+			break
+		}
 	}
-	s.writeGet(w)
+
+	if s.upgrader != nil && upgrade {
+		ip := s.remoteAddr(r)
+		if s.policy.IsBanned(ip) || !s.policy.ApplyLimitPolicy(ip) {
+			log.Printf("Websocket ignoring banned ip %v", ip)
+			return
+		}
+
+		wsconn, err := s.upgrader.Upgrade(w, r, nil)
+		if err != nil {
+			log.Printf("Websocket upgrade failed %v: %v", ip, err)
+			return
+		}
+
+		defer wsconn.Close()
+		wsconn.SetReadLimit(s.config.Proxy.LimitBodySize)
+
+		cs := &Session{wsconn: wsconn, ip: ip}
+
+		err = s.handleWSClient(cs)
+		if err != nil {
+			s.removeSession(cs)
+			wsconn.Close()
+		}
+
+	} else if r.Method == http.MethodGet {
+		s.writeGet(w)
+	} else {
+		s.writeError(w, 405, "rpc: GET method required, received "+r.Method)
+	}
 }
 
 func (s *ProxyServer) rpc() *rpc.RPCClient {
@@ -299,8 +353,8 @@ func (cs *Session) sendError(id json.RawMessage, reply *ErrorReply) error {
 
 func (s *ProxyServer) writeError(w http.ResponseWriter, status int, msg string) {
 	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
-	w.Write([]byte(msg))
 	w.WriteHeader(status)
+	w.Write([]byte(msg))
 }
 
 func (s *ProxyServer) writeOptions(w http.ResponseWriter) {
@@ -316,8 +370,8 @@ func (s *ProxyServer) writeOptions(w http.ResponseWriter) {
 
 func (s *ProxyServer) writeGet(w http.ResponseWriter) {
 	w.Header().Set("Access-Control-Allow-Origin", "*")
-	w.Write([]byte("open-ethereum-pool"))
 	w.WriteHeader(200)
+	w.Write([]byte("open-ethereum-pool"))
 }
 
 func (s *ProxyServer) currentBlockTemplate() *BlockTemplate {

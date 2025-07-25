@@ -18,8 +18,6 @@ const (
 )
 
 func (s *ProxyServer) ListenTCP() {
-	s.timeout = util.MustParseDuration(s.config.Proxy.Stratum.Timeout)
-
 	var err error
 	var server net.Listener
 	if s.config.Proxy.Stratum.TLS {
@@ -196,20 +194,24 @@ func (s *ProxyServer) broadcastNewJobs() {
 	if t == nil || len(t.Header) == 0 || s.isSick() {
 		return
 	}
-	reply := []string{t.Header, t.Seed, s.diff}
+	height := util.ToHex(int64(t.Height), false)
+	reply := []string{t.Header, t.Seed, s.diff, height}
 
 	s.sessionsMu.RLock()
 	defer s.sessionsMu.RUnlock()
 
-	count := len(s.sessions)
-	log.Printf("Broadcasting new job to %v stratum miners", count)
-
 	start := time.Now()
 	bcast := make(chan int, 1024)
 	n := 0
+	count := 0
 
 	for m, _ := range s.sessions {
+		if m.conn == nil {
+			continue
+		}
+
 		n++
+		count++
 		bcast <- n
 
 		go func(cs *Session) {
@@ -223,5 +225,6 @@ func (s *ProxyServer) broadcastNewJobs() {
 			}
 		}(m)
 	}
-	log.Printf("Jobs broadcast finished %s", time.Since(start))
+
+	log.Printf("Jobs broadcast finished to %v stratum miners: %s", count, time.Since(start))
 }
